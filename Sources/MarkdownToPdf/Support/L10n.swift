@@ -10,10 +10,17 @@ enum L10n {
 
     static let dropTitle = t("Drop Markdown files here", "Markdown dosyalarını buraya bırakın")
     static let dropSubtitle = t(
-        "One or many .md files — each is converted to PDF in turn.",
-        "Bir ya da birden çok .md dosyası — her biri sırayla PDF'e çevrilir."
+        "One or many .md files, or paste Markdown text with ⌘V.",
+        "Bir ya da birden çok .md dosyası; ya da Markdown metnini ⌘V ile yapıştırın."
     )
     static let chooseFiles = t("Choose Files…", "Dosya Seç…")
+    static let pasteFromClipboard = t("Paste from Clipboard", "Panodan Yapıştır")
+    static let pastedTextName = t("Pasted text", "Yapıştırılan metin")
+    static let pastedBadge = t("from clipboard", "panodan")
+    static let clipboardEmpty = t(
+        "The clipboard has no text or Markdown files.",
+        "Panoda metin ya da Markdown dosyası yok."
+    )
     static let queueTitle = t("Files", "Dosyalar")
     static let clearFinished = t("Clear Finished", "Bitenleri Temizle")
 

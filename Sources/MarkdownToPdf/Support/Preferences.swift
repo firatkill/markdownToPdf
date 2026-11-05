@@ -18,6 +18,7 @@ final class Preferences: ObservableObject {
     private enum Key {
         static let saveMode = "saveMode"
         static let saveFolder = "saveFolderPath"
+        static let lastSaveFolder = "lastSaveFolderPath"
     }
 
     private let defaults = UserDefaults.standard
@@ -28,6 +29,12 @@ final class Preferences: ObservableObject {
 
     @Published var saveFolder: URL? {
         didSet { defaults.set(saveFolder?.path, forKey: Key.saveFolder) }
+    }
+
+    /// Folder of the last saved PDF; dialogs for pasted text open here.
+    var lastSaveFolder: URL? {
+        get { defaults.string(forKey: Key.lastSaveFolder).map { URL(fileURLWithPath: $0, isDirectory: true) } }
+        set { defaults.set(newValue?.path, forKey: Key.lastSaveFolder) }
     }
 
     private init() {

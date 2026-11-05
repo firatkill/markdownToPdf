@@ -8,7 +8,11 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            DropZone(isTargeted: isTargeted) { queue.chooseFiles() }
+            DropZone(
+                isTargeted: isTargeted,
+                chooseFiles: { queue.chooseFiles() },
+                paste: { queue.pasteFromClipboard() }
+            )
 
             if let notice = queue.notice {
                 Label(notice, systemImage: "exclamationmark.triangle.fill")
@@ -67,6 +71,7 @@ struct ContentView: View {
 private struct DropZone: View {
     let isTargeted: Bool
     let chooseFiles: () -> Void
+    let paste: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
@@ -83,9 +88,15 @@ private struct DropZone: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            Button(L10n.chooseFiles, action: chooseFiles)
-                .controlSize(.large)
-                .padding(.top, 4)
+            HStack(spacing: 10) {
+                Button(L10n.chooseFiles, action: chooseFiles)
+                Button(action: paste) {
+                    Label(L10n.pasteFromClipboard, systemImage: "doc.on.clipboard")
+                }
+                .help("⌘V")
+            }
+            .controlSize(.large)
+            .padding(.top, 4)
         }
         .padding(28)
         .frame(maxWidth: .infinity, minHeight: 220)
@@ -176,10 +187,15 @@ private struct JobRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "doc.text")
+            Image(systemName: job.isPasted ? "doc.on.clipboard" : "doc.text")
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 2) {
-                Text(job.name).lineLimit(1).truncationMode(.middle)
+                HStack(spacing: 6) {
+                    Text(job.name).lineLimit(1).truncationMode(.middle)
+                    if job.isPasted {
+                        Text(L10n.pastedBadge).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
                 if case .failed(let reason) = job.status {
                     Text(reason).font(.caption).foregroundStyle(.red).lineLimit(2)
                 }

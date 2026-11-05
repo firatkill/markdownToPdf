@@ -54,13 +54,17 @@ final class PDFRenderer: NSObject {
 
     /// Converts `source` (a Markdown file) into a PDF written to `destination`.
     func render(_ source: URL, to destination: URL) async throws {
-        let markdown = try Self.readText(at: source)
-        let folder = source.deletingLastPathComponent()
-        let html = MarkdownHTML.document(
-            from: markdown,
+        try await render(
+            markdown: try Self.readText(at: source),
             title: source.deletingPathExtension().lastPathComponent,
-            baseURL: folder
+            baseURL: source.deletingLastPathComponent(),
+            to: destination
         )
+    }
+
+    /// Converts Markdown text into a PDF. Relative image paths resolve against `baseURL`.
+    func render(markdown: String, title: String, baseURL: URL, to destination: URL) async throws {
+        let html = MarkdownHTML.document(from: markdown, title: title, baseURL: baseURL)
 
         let htmlURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("markdownToPdf-\(UUID().uuidString).html")

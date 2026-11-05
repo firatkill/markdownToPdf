@@ -1,38 +1,9 @@
 import AppKit
 import UniformTypeIdentifiers
 
-struct ConversionJob: Identifiable, Equatable {
-    enum Status: Equatable {
-        case waiting
-        case converting
-        case awaitingSave
-        case saved(URL)
-        case skipped
-        case failed(String)
-
-        var isFinished: Bool {
-            switch self {
-            case .saved, .skipped, .failed: return true
-            case .waiting, .converting, .awaitingSave: return false
-            }
-        }
-    }
-
-    let id = UUID()
-    let source: URL
-    /// Files added together (one drop, one Open panel) share a batch and a save folder.
-    let batch: UUID
-    let batchSize: Int
-    var status: Status = .waiting
-
-    var isPartOfBatch: Bool { batchSize > 1 }
-
-    var name: String { source.lastPathComponent }
-}
-
-/// Holds dropped files and converts them strictly one after another.
+/// Holds dropped files and pasted text and converts them strictly one after another.
 ///
-/// A single file: render → ask for a file name and place → save.
+/// A single item: render → ask for a file name and place → save.
 /// Several files added together: render the first → ask once for a folder →
 /// save every file of that batch into it without asking again.
 @MainActor
@@ -72,14 +43,39 @@ final class ConversionQueue: ObservableObject {
         notice = markdown.count < urls.count ? L10n.unsupportedFiles : nil
         guard !markdown.isEmpty else { return }
 
+        let batch = UUID()
+        enqueue(markdown.map { ConversionJob.file($0, batch: batch, batchSize: markdown.count) })
+    }
+
+    /// Converts Markdown text, e.g. from the clipboard.
+    func addText(_ markdown: String) {
+        notice = nil
+        enqueue([ConversionJob.text(markdown)])
+    }
+
+    /// Adds what is on the clipboard: copied Markdown files, or Markdown text.
+    func pasteFromClipboard() {
+        let pasteboard = NSPasteboard.general
+        let fileURLs = pasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL] ?? []
+
+        if !fileURLs.isEmpty {
+            add(fileURLs)
+        } else if let text = pasteboard.string(forType: .string),
+                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            addText(text)
+        } else {
+            notice = L10n.clipboardEmpty
+        }
+    }
+
+    private func enqueue(_ newJobs: [ConversionJob]) {
         if !isProcessing {
             batchStart = jobs.count
         }
-        let batch = UUID()
-        jobs.append(contentsOf: markdown.map {
-            ConversionJob(source: $0, batch: batch, batchSize: markdown.count)
-        })
-
+        jobs.append(contentsOf: newJobs)
         if !isProcessing {
             Task { await processQueue() }
         }
@@ -131,7 +127,6 @@ final class ConversionQueue: ObservableObject {
 
     private func process(at index: Int) async {
         let job = jobs[index]
-        let source = job.source
         let id = job.id
         if cancelledBatches.contains(job.batch) {
             setStatus(.skipped, for: id)
@@ -144,7 +139,17 @@ final class ConversionQueue: ObservableObject {
         setStatus(.converting, for: id)
         do {
             let started = Date()
-            try await renderer.render(source, to: temporaryPDF)
+            switch job.input {
+            case .file(let url):
+                try await renderer.render(url, to: temporaryPDF)
+            case .text(let markdown):
+                try await renderer.render(
+                    markdown: markdown,
+                    title: job.baseName,
+                    baseURL: FileManager.default.homeDirectoryForCurrentUser,
+                    to: temporaryPDF
+                )
+            }
             // Keep the loading screen up long enough to be read rather than flash.
             let elapsed = Date().timeIntervalSince(started)
             if elapsed < 0.6 {
@@ -167,6 +172,7 @@ final class ConversionQueue: ObservableObject {
             } else {
                 try fileManager.moveItem(at: temporaryPDF, to: destination)
             }
+            preferences.lastSaveFolder = destination.deletingLastPathComponent()
             setStatus(.saved(destination), for: id)
         } catch {
             setStatus(.failed(L10n.errorSave), for: id)
@@ -179,10 +185,13 @@ final class ConversionQueue: ObservableObject {
     private func destination(for job: ConversionJob) async -> URL? {
         switch preferences.saveMode {
         case .nextToSource:
-            return Self.uniquePDFURL(in: job.source.deletingLastPathComponent(), for: job.source)
+            // Pasted text has no file to sit next to, so it falls through to asking.
+            if let folder = job.sourceFolder {
+                return Self.uniquePDFURL(in: folder, named: job.baseName)
+            }
         case .folder:
             if let folder = preferences.existingSaveFolder {
-                return Self.uniquePDFURL(in: folder, for: job.source)
+                return Self.uniquePDFURL(in: folder, named: job.baseName)
             }
             notice = L10n.saveFolderMissing
         case .ask:
@@ -191,11 +200,11 @@ final class ConversionQueue: ObservableObject {
 
         guard job.isPartOfBatch else {
             setStatus(.awaitingSave, for: job.id)
-            return await askForDestination(for: job.source)
+            return await askForDestination(for: job)
         }
 
         if let folder = batchFolders[job.batch] {
-            return Self.uniquePDFURL(in: folder, for: job.source)
+            return Self.uniquePDFURL(in: folder, named: job.baseName)
         }
 
         setStatus(.awaitingSave, for: job.id)
@@ -204,12 +213,11 @@ final class ConversionQueue: ObservableObject {
             return nil
         }
         batchFolders[job.batch] = folder
-        return Self.uniquePDFURL(in: folder, for: job.source)
+        return Self.uniquePDFURL(in: folder, named: job.baseName)
     }
 
     /// `notes.pdf`, or `notes 2.pdf`, `notes 3.pdf`… so saves without a dialog never overwrite a file.
-    static func uniquePDFURL(in folder: URL, for source: URL) -> URL {
-        let base = source.deletingPathExtension().lastPathComponent
+    static func uniquePDFURL(in folder: URL, named base: String) -> URL {
         var candidate = folder.appendingPathComponent(base).appendingPathExtension("pdf")
         var counter = 2
         while FileManager.default.fileExists(atPath: candidate.path) {
@@ -228,19 +236,26 @@ final class ConversionQueue: ObservableObject {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
-        panel.directoryURL = job.source.deletingLastPathComponent()
+        panel.directoryURL = startFolder(for: job)
         return await present(panel) == .OK ? panel.url : nil
     }
 
-    private func askForDestination(for source: URL) async -> URL? {
+    /// Where dialogs open: the Markdown file's folder, else the last folder used, else the Desktop.
+    private func startFolder(for job: ConversionJob) -> URL? {
+        job.sourceFolder
+            ?? preferences.lastSaveFolder
+            ?? FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
+    }
+
+    private func askForDestination(for job: ConversionJob) async -> URL? {
         let panel = NSSavePanel()
         panel.title = L10n.savePanelTitle
         panel.prompt = L10n.savePanelButton
         panel.allowedContentTypes = [.pdf]
         panel.canCreateDirectories = true
         panel.isExtensionHidden = false
-        panel.directoryURL = source.deletingLastPathComponent()
-        panel.nameFieldStringValue = source.deletingPathExtension().lastPathComponent + ".pdf"
+        panel.directoryURL = startFolder(for: job)
+        panel.nameFieldStringValue = job.baseName + ".pdf"
 
         return await present(panel) == .OK ? panel.url : nil
     }

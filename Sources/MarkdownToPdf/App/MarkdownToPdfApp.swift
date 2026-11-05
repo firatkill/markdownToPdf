@@ -27,6 +27,7 @@ struct MarkdownToPdfApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let queue = ConversionQueue()
     private var isCommandLineMode = false
+    private var pasteMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let job = CommandLineConversion.parse(CommandLine.arguments) {
@@ -38,6 +39,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
+        installPasteShortcut()
+    }
+
+    /// ⌘V in the main window converts the clipboard. Text fields and dialogs
+    /// (such as the save dialog's name field) keep their normal paste.
+    private func installPasteShortcut() {
+        pasteMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self,
+                  event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+                  event.charactersIgnoringModifiers?.lowercased() == "v",
+                  let window = event.window,
+                  !(window is NSPanel),
+                  window.attachedSheet == nil,
+                  !(window.firstResponder is NSText)
+            else { return event }
+            self.queue.pasteFromClipboard()
+            return nil
+        }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
