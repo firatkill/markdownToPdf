@@ -14,6 +14,9 @@ struct MarkdownToPdfApp: App {
         .windowResizability(.contentMinSize)
         .defaultSize(width: 520, height: 520)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button(L10n.checkForUpdates) { UpdateChecker.shared.checkNow() }
+            }
             CommandGroup(replacing: .newItem) {
                 Button(L10n.chooseFiles) { appDelegate.queue.chooseFiles() }
                     .keyboardShortcut("o")
@@ -46,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         installPasteShortcut()
         NSUpdateDynamicServices()
+        UpdateChecker.shared.checkIfDue()
     }
 
     // MARK: - Services (declared under NSServices in Info.plist)

@@ -4,10 +4,15 @@ import UniformTypeIdentifiers
 /// The app's only screen: a drop zone, the list of files, and a loading overlay.
 struct ContentView: View {
     @EnvironmentObject private var queue: ConversionQueue
+    @ObservedObject private var updater = UpdateChecker.shared
     @State private var isTargeted = false
 
     var body: some View {
         VStack(spacing: 16) {
+            if let release = updater.available {
+                UpdateBanner(version: release.version)
+            }
+
             DropZone(
                 isTargeted: isTargeted,
                 chooseFiles: { queue.chooseFiles() },
@@ -112,6 +117,38 @@ private struct DropZone: View {
                 )
         )
         .animation(.easeOut(duration: 0.15), value: isTargeted)
+    }
+}
+
+// MARK: - Update banner
+
+private struct UpdateBanner: View {
+    let version: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "arrow.down.circle.fill")
+                .foregroundStyle(Color.accentColor)
+                .font(.title3)
+            Text(L10n.updateBanner(version))
+                .font(.callout.weight(.medium))
+            Spacer()
+            Button(L10n.updateDownload) { UpdateChecker.shared.download() }
+                .controlSize(.small)
+            Button {
+                UpdateChecker.shared.skip()
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.borderless)
+            .help(L10n.updateSkip)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.accentColor.opacity(0.1))
+        )
     }
 }
 

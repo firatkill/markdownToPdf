@@ -80,6 +80,36 @@ enum L10n {
         "Yalnızca Markdown dosyaları (.md, .markdown, .txt) dönüştürülebilir."
     )
 
+    static let checkForUpdates = t("Check for Updates…", "Güncellemeleri Denetle…")
+    static func updateBanner(_ version: String) -> String {
+        t("Version \(version) is available.", "Yeni sürüm hazır: \(version)")
+    }
+    static func updateAvailableTitle(_ version: String) -> String {
+        t("markdownToPdf \(version) is available", "markdownToPdf \(version) yayında")
+    }
+    static func updateAvailableBody(_ current: String) -> String {
+        t(
+            "You have \(current). Download the new version from GitHub, or run the install command from the README again.",
+            "Sizdeki sürüm \(current). Yeni sürümü GitHub'dan indirin ya da README'deki kurulum komutunu tekrar çalıştırın."
+        )
+    }
+    static let updateDownload = t("Download", "İndir")
+    static let updateLater = t("Later", "Sonra")
+    static let updateSkip = t("Skip this version", "Bu sürümü atla")
+    static let upToDateTitle = t("You're up to date", "Güncelsiniz")
+    static func upToDateBody(_ version: String) -> String {
+        t("markdownToPdf \(version) is the latest version.", "markdownToPdf \(version) en son sürüm.")
+    }
+    static let updateCheckFailed = t("Couldn't check for updates", "Güncellemeler denetlenemedi")
+    static let updateCheckFailedBody = t(
+        "GitHub could not be reached. Check your internet connection and try again.",
+        "GitHub'a ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin."
+    )
+    static let updateUnknownVersion = t(
+        "This copy was not built as an app, so its version is unknown.",
+        "Bu kopya uygulama olarak derlenmediği için sürümü bilinmiyor."
+    )
+
     static let errorUnreadable = t("The file could not be read.", "Dosya okunamadı.")
     static let errorPrint = t("The PDF could not be created.", "PDF oluşturulamadı.")
     static let errorSave = t("The PDF could not be saved there.", "PDF oraya kaydedilemedi.")
