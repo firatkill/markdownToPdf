@@ -176,6 +176,11 @@ private struct LoadingOverlay: View {
 
     private var isConverting: Bool { job.status == .converting }
 
+    private var title: String {
+        if isConverting { return L10n.loadingConverting }
+        return job.isPartOfBatch ? L10n.loadingChooseFolder : L10n.loadingSaving
+    }
+
     var body: some View {
         ZStack {
             Rectangle().fill(.regularMaterial)
@@ -191,7 +196,7 @@ private struct LoadingOverlay: View {
                 }
 
                 VStack(spacing: 6) {
-                    Text(isConverting ? L10n.loadingConverting : L10n.loadingSaving)
+                    Text(title)
                         .font(.title3.weight(.semibold))
                     Text(job.name)
                         .font(.callout)

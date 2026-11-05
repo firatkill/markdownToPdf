@@ -26,6 +26,7 @@ enum L10n {
 
     static let loadingConverting = t("Converting to PDF", "PDF'e dönüştürülüyor")
     static let loadingSaving = t("Choose where to save the PDF", "PDF'in kaydedileceği yeri seçin")
+    static let loadingChooseFolder = t("Choose a folder for all PDFs", "Tüm PDF'ler için bir klasör seçin")
 
     static func progress(_ current: Int, _ total: Int) -> String {
         t("File \(current) of \(total)", "\(total) dosyadan \(current). dosya")
@@ -33,6 +34,11 @@ enum L10n {
 
     static let savePanelTitle = t("Save PDF", "PDF'i Kaydet")
     static let savePanelButton = t("Save", "Kaydet")
+    static let folderPanelTitle = t("Save PDFs", "PDF'leri Kaydet")
+
+    static func folderPanelMessage(_ count: Int) -> String {
+        t("Choose one folder for all \(count) PDFs", "\(count) PDF'in tamamı için bir klasör seçin")
+    }
     static let openPanelMessage = t("Choose Markdown files to convert", "Dönüştürülecek Markdown dosyalarını seçin")
     static let unsupportedFiles = t(
         "Only Markdown files (.md, .markdown, .txt) can be converted.",

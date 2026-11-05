@@ -18,7 +18,8 @@
 ## Features
 
 - **Drag & drop** one or many `.md` files onto the window.
-- **One file at a time:** each file is converted, then you choose where to save it, then the next one starts.
+- **One file at a time:** files are converted strictly in order.
+- **Asks once per drop:** drop a single file and you pick its name and place; drop ten and you pick one folder, once, and all ten PDFs are saved there.
 - **Loading screen** with the file name and "File 2 of 5" progress while converting.
 - **GitHub-style output** on A4 pages: headings, tables, task lists, code blocks, block quotes, strikethrough and images.
 - **Images with relative paths** (`![](images/chart.png)`) are picked up from next to the Markdown file.
@@ -65,10 +66,10 @@ See [Building from source](#building-from-source).
 1. Open **markdownToPdf**.
 2. Drag one or more Markdown files (`.md`, `.markdown`, `.txt`) onto the window, or click **Choose Files…** (⌘O).
 3. While a file converts you see the loading screen.
-4. A save dialog opens with the same name as your file (`notes.md` → `notes.pdf`) in the same folder. Pick a place and click **Save**.
-5. If you dropped several files, the next one starts right after. Click **Cancel** in the save dialog to skip a file.
+4. **One file:** a save dialog opens with the same name as your file (`notes.md` → `notes.pdf`) in the same folder. Pick a place and click **Save**. **Cancel** skips the file.
+5. **Several files at once:** after the first file is converted you are asked once for a folder. Every PDF from that drop is saved there with its own name (`notes.md` → `notes.pdf`). If a PDF with that name is already in the folder, nothing is overwritten: the new one is saved as `notes 2.pdf`. **Cancel** skips the whole drop.
 
-You can drop more files while others are still being converted; they join the end of the list. Click **Saved** next to a finished file to show the PDF in Finder.
+You can drop more files while others are still being converted; they join the end of the list as a new drop, with their own folder question. Click **Saved** next to a finished file to show the PDF in Finder.
 
 You can also right-click a Markdown file in Finder and choose **Open With → markdownToPdf**.
 
@@ -145,7 +146,8 @@ The version number in the app comes from the tag (`v1.2.3` → `1.2.3`); local b
 ### Özellikler
 
 - Bir ya da birden çok `.md` dosyasını pencereye **sürükleyip bırakın**.
-- Dosyalar **sırayla** işlenir: önce dönüştürülür, sonra nereye kaydedileceği sorulur, ardından sıradaki dosyaya geçilir.
+- Dosyalar **sırayla** işlenir.
+- **Her bırakışta bir kez sorar:** tek dosya bırakırsanız adını ve yerini seçersiniz; on dosya bırakırsanız bir kez klasör seçersiniz ve on PDF'in hepsi oraya kaydedilir.
 - Dönüştürme sırasında dosya adı ve "5 dosyadan 2. dosya" ilerlemesini gösteren bir **yükleme ekranı** çıkar.
 - A4 sayfalarda GitHub tarzı çıktı: başlıklar, tablolar, görev listeleri, kod blokları, alıntılar ve görseller.
 - Göreli yollu görseller (`![](resimler/grafik.png)`) Markdown dosyasının yanından alınır.
@@ -171,8 +173,8 @@ xattr -dr com.apple.quarantine /Applications/markdownToPdf.app
 1. **markdownToPdf**'i açın.
 2. Markdown dosyalarını pencereye bırakın ya da **Dosya Seç…** düğmesine tıklayın (⌘O).
 3. Dönüştürme sırasında yükleme ekranı görünür.
-4. Kaydetme penceresi, dosyanızın adıyla (`notlar.md` → `notlar.pdf`) aynı klasörde açılır. Yeri seçip **Kaydet**'e tıklayın.
-5. Birden çok dosya bıraktıysanız sıradaki hemen başlar. Bir dosyayı atlamak için kaydetme penceresinde **Vazgeç**'e tıklayın.
+4. **Tek dosya:** kaydetme penceresi, dosyanızın adıyla (`notlar.md` → `notlar.pdf`) aynı klasörde açılır. Yeri seçip **Kaydet**'e tıklayın. **Vazgeç** dosyayı atlar.
+5. **Aynı anda birden çok dosya:** ilk dosya dönüştürülünce bir kez klasör sorulur. O bırakıştaki tüm PDF'ler kendi adlarıyla oraya kaydedilir. Klasörde aynı adlı bir PDF varsa üzerine yazılmaz, yenisi `notlar 2.pdf` olarak kaydedilir. **Vazgeç** o bırakışın tamamını atlar.
 
 ### Kaynaktan derleme
 
