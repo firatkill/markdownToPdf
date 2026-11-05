@@ -1,0 +1,19 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build -c release
+      - name: Convert the sample file
+        run: |
+          .build/release/MarkdownToPdf --convert Examples/sample.md "$RUNNER_TEMP/sample.pdf"
+          test -s "$RUNNER_TEMP/sample.pdf"
