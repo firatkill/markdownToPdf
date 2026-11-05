@@ -44,6 +44,7 @@ final class ConversionQueue: ObservableObject {
     @Published var notice: String?
 
     private let renderer = PDFRenderer()
+    private let preferences = Preferences.shared
     /// Index (within the current batch) of the file being worked on, for "File 2 of 5".
     private var batchStart = 0
     /// Save folder chosen for each multi-file batch.
@@ -81,6 +82,21 @@ final class ConversionQueue: ObservableObject {
 
         if !isProcessing {
             Task { await processQueue() }
+        }
+    }
+
+    /// Lets the user pick the folder for the "always save to this folder" mode.
+    func chooseSaveFolder() {
+        let panel = NSOpenPanel()
+        panel.message = L10n.chooseSaveFolderMessage
+        panel.prompt = L10n.chooseButton
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.directoryURL = preferences.saveFolder
+        if panel.runModal() == .OK, let url = panel.url {
+            preferences.saveFolder = url
+            preferences.saveMode = .folder
         }
     }
 
@@ -157,9 +173,22 @@ final class ConversionQueue: ObservableObject {
         }
     }
 
-    /// Where the PDF for `job` goes. Asks the user only for single files and for
-    /// the first file of a batch; later files of the batch reuse that folder.
+    /// Where the PDF for `job` goes, following the save setting.
+    /// In "ask" mode a single file gets a save dialog and a batch is asked for a
+    /// folder once; the other modes never ask unless their folder is missing.
     private func destination(for job: ConversionJob) async -> URL? {
+        switch preferences.saveMode {
+        case .nextToSource:
+            return Self.uniquePDFURL(in: job.source.deletingLastPathComponent(), for: job.source)
+        case .folder:
+            if let folder = preferences.existingSaveFolder {
+                return Self.uniquePDFURL(in: folder, for: job.source)
+            }
+            notice = L10n.saveFolderMissing
+        case .ask:
+            break
+        }
+
         guard job.isPartOfBatch else {
             setStatus(.awaitingSave, for: job.id)
             return await askForDestination(for: job.source)
@@ -178,7 +207,7 @@ final class ConversionQueue: ObservableObject {
         return Self.uniquePDFURL(in: folder, for: job.source)
     }
 
-    /// `notes.pdf`, or `notes 2.pdf`, `notes 3.pdf`… so batch saves never overwrite a file.
+    /// `notes.pdf`, or `notes 2.pdf`, `notes 3.pdf`… so saves without a dialog never overwrite a file.
     static func uniquePDFURL(in folder: URL, for source: URL) -> URL {
         let base = source.deletingPathExtension().lastPathComponent
         var candidate = folder.appendingPathComponent(base).appendingPathExtension("pdf")

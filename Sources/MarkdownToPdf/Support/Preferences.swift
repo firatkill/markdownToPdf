@@ -1,0 +1,48 @@
+import Foundation
+
+/// Where finished PDFs go.
+enum SaveMode: String, CaseIterable {
+    /// Show a save dialog (one folder question for several files dropped together).
+    case ask
+    /// Save next to the Markdown file, without asking.
+    case nextToSource
+    /// Save into one chosen folder, without asking.
+    case folder
+}
+
+/// User settings, stored in UserDefaults so they survive restarts.
+@MainActor
+final class Preferences: ObservableObject {
+    static let shared = Preferences()
+
+    private enum Key {
+        static let saveMode = "saveMode"
+        static let saveFolder = "saveFolderPath"
+    }
+
+    private let defaults = UserDefaults.standard
+
+    @Published var saveMode: SaveMode {
+        didSet { defaults.set(saveMode.rawValue, forKey: Key.saveMode) }
+    }
+
+    @Published var saveFolder: URL? {
+        didSet { defaults.set(saveFolder?.path, forKey: Key.saveFolder) }
+    }
+
+    private init() {
+        saveMode = SaveMode(rawValue: defaults.string(forKey: Key.saveMode) ?? "") ?? .ask
+        saveFolder = defaults.string(forKey: Key.saveFolder).map { URL(fileURLWithPath: $0, isDirectory: true) }
+        if saveMode == .folder && saveFolder == nil {
+            saveMode = .ask
+        }
+    }
+
+    /// The chosen folder, if it is still there.
+    var existingSaveFolder: URL? {
+        guard let folder = saveFolder else { return nil }
+        var isDirectory: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory)
+        return exists && isDirectory.boolValue ? folder : nil
+    }
+}

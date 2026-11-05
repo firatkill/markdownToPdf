@@ -19,7 +19,12 @@ struct ContentView: View {
 
             if !queue.jobs.isEmpty {
                 JobList()
+            } else {
+                Spacer(minLength: 0)
             }
+
+            Divider()
+            OptionsBar()
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -96,6 +101,48 @@ private struct DropZone: View {
                 )
         )
         .animation(.easeOut(duration: 0.15), value: isTargeted)
+    }
+}
+
+// MARK: - Options
+
+/// Settings shown at the bottom of the window.
+private struct OptionsBar: View {
+    @EnvironmentObject private var queue: ConversionQueue
+    @ObservedObject private var preferences = Preferences.shared
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(L10n.saveLabel).foregroundStyle(.secondary)
+            Menu {
+                Picker(L10n.saveLabel, selection: $preferences.saveMode) {
+                    Text(L10n.saveModeAsk).tag(SaveMode.ask)
+                    Text(L10n.saveModeNextToSource).tag(SaveMode.nextToSource)
+                    if let folder = preferences.saveFolder {
+                        Text(L10n.saveModeFolder(folder.lastPathComponent)).tag(SaveMode.folder)
+                    }
+                }
+                .pickerStyle(.inline)
+                .labelsHidden()
+                Divider()
+                Button(L10n.chooseSaveFolder) { queue.chooseSaveFolder() }
+            } label: {
+                Text(currentModeTitle)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help(preferences.saveMode == .folder ? (preferences.saveFolder?.path ?? "") : "")
+            Spacer()
+        }
+        .font(.callout)
+    }
+
+    private var currentModeTitle: String {
+        switch preferences.saveMode {
+        case .ask: return L10n.saveModeAsk
+        case .nextToSource: return L10n.saveModeNextToSource
+        case .folder: return L10n.saveModeFolder(preferences.saveFolder?.lastPathComponent ?? "")
+        }
     }
 }
 

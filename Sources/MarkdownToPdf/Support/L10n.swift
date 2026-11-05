@@ -42,6 +42,20 @@ enum L10n {
     static func folderPanelMessage(_ count: Int) -> String {
         t("Choose one folder for all \(count) PDFs", "\(count) PDF'in tamamı için bir klasör seçin")
     }
+    static let saveLabel = t("Save:", "Kaydet:")
+    static let saveModeAsk = t("Ask every time", "Her seferinde sor")
+    static let saveModeNextToSource = t("Next to the Markdown file", "Markdown dosyasının yanına")
+    static func saveModeFolder(_ name: String) -> String { t("In “\(name)”", "“\(name)” klasörüne") }
+    static let chooseSaveFolder = t("Choose Folder…", "Klasör Seç…")
+    static let chooseSaveFolderMessage = t(
+        "PDFs will be saved here without asking",
+        "PDF'ler sormadan buraya kaydedilecek"
+    )
+    static let chooseButton = t("Choose", "Seç")
+    static let saveFolderMissing = t(
+        "The save folder no longer exists, so you are asked instead.",
+        "Kaydetme klasörü artık yok, bu yüzden nereye kaydedileceği soruluyor."
+    )
     static let openPanelMessage = t("Choose Markdown files to convert", "Dönüştürülecek Markdown dosyalarını seçin")
     static let unsupportedFiles = t(
         "Only Markdown files (.md, .markdown, .txt) can be converted.",
