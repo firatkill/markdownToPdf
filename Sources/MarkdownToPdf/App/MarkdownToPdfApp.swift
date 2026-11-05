@@ -26,9 +26,11 @@ struct MarkdownToPdfApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let queue = ConversionQueue()
+    private var isCommandLineMode = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let job = CommandLineConversion.parse(CommandLine.arguments) {
+            isCommandLineMode = true
             NSApp.setActivationPolicy(.accessory)
             NSApp.windows.forEach { $0.orderOut(nil) }
             Task { exit(await job.run()) }
@@ -43,6 +45,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        // In --convert mode there is no window; quitting early would drop the PDF.
+        !isCommandLineMode
     }
 }
