@@ -141,6 +141,13 @@ private struct JobRow: View {
             status
         }
         .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .contextMenu {
+            if case .saved(let url) = job.status {
+                Button(L10n.menuOpen) { NSWorkspace.shared.open(url) }
+                Button(L10n.menuShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+            }
+        }
     }
 
     @ViewBuilder private var status: some View {

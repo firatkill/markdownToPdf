@@ -24,6 +24,9 @@ enum L10n {
     static let statusSkipped = t("Not saved", "Kaydedilmedi")
     static let statusFailed = t("Failed", "Başarısız")
 
+    static let menuOpen = t("Open", "Aç")
+    static let menuShowInFinder = t("Show in Finder", "Finder'da Göster")
+
     static let loadingConverting = t("Converting to PDF", "PDF'e dönüştürülüyor")
     static let loadingSaving = t("Choose where to save the PDF", "PDF'in kaydedileceği yeri seçin")
     static let loadingChooseFolder = t("Choose a folder for all PDFs", "Tüm PDF'ler için bir klasör seçin")

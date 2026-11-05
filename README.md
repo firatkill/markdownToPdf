@@ -69,7 +69,7 @@ See [Building from source](#building-from-source).
 4. **One file:** a save dialog opens with the same name as your file (`notes.md` → `notes.pdf`) in the same folder. Pick a place and click **Save**. **Cancel** skips the file.
 5. **Several files at once:** after the first file is converted you are asked once for a folder. Every PDF from that drop is saved there with its own name (`notes.md` → `notes.pdf`). If a PDF with that name is already in the folder, nothing is overwritten: the new one is saved as `notes 2.pdf`. **Cancel** skips the whole drop.
 
-You can drop more files while others are still being converted; they join the end of the list as a new drop, with their own folder question. Click **Saved** next to a finished file to show the PDF in Finder.
+You can drop more files while others are still being converted; they join the end of the list as a new drop, with their own folder question. Click **Saved** next to a finished file to show the PDF in Finder, or right-click it for **Open** and **Show in Finder**.
 
 You can also right-click a Markdown file in Finder and choose **Open With → markdownToPdf**.
 
@@ -175,6 +175,8 @@ xattr -dr com.apple.quarantine /Applications/markdownToPdf.app
 3. Dönüştürme sırasında yükleme ekranı görünür.
 4. **Tek dosya:** kaydetme penceresi, dosyanızın adıyla (`notlar.md` → `notlar.pdf`) aynı klasörde açılır. Yeri seçip **Kaydet**'e tıklayın. **Vazgeç** dosyayı atlar.
 5. **Aynı anda birden çok dosya:** ilk dosya dönüştürülünce bir kez klasör sorulur. O bırakıştaki tüm PDF'ler kendi adlarıyla oraya kaydedilir. Klasörde aynı adlı bir PDF varsa üzerine yazılmaz, yenisi `notlar 2.pdf` olarak kaydedilir. **Vazgeç** o bırakışın tamamını atlar.
+
+Biten bir dosyaya sağ tıklayınca **Aç** ve **Finder'da Göster** seçenekleri çıkar.
 
 ### Kaynaktan derleme
 
