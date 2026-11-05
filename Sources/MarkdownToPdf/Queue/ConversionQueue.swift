@@ -30,7 +30,7 @@ final class ConversionQueue: ObservableObject {
     /// Position of the active file and size of the current batch.
     var batchProgress: (current: Int, total: Int) {
         let batch = jobs[batchStart...]
-        let done = batch.filter { $0.status.isFinished }.count
+        let done = batch.filter { $0.status.isFinished || $0.status == .converted }.count
         return (min(done + 1, batch.count), batch.count)
     }
 
@@ -44,7 +44,12 @@ final class ConversionQueue: ObservableObject {
         guard !markdown.isEmpty else { return }
 
         let batch = UUID()
-        enqueue(markdown.map { ConversionJob.file($0, batch: batch, batchSize: markdown.count) })
+        let merge = preferences.mergeIntoOne && markdown.count > 1
+        enqueue(markdown.map {
+            var job = ConversionJob.file($0, batch: batch, batchSize: markdown.count)
+            job.merge = merge
+            return job
+        })
     }
 
     /// Converts Markdown text, e.g. from the clipboard.
@@ -119,7 +124,11 @@ final class ConversionQueue: ObservableObject {
         defer { isProcessing = false }
 
         while let index = jobs.firstIndex(where: { $0.status == .waiting }) {
-            await process(at: index)
+            if jobs[index].merge {
+                await processMerged(batch: jobs[index].batch)
+            } else {
+                await process(at: index)
+            }
         }
         batchFolders.removeAll()
         cancelledBatches.removeAll()
@@ -136,7 +145,54 @@ final class ConversionQueue: ObservableObject {
             .appendingPathComponent("markdownToPdf-\(UUID().uuidString).pdf")
         defer { try? FileManager.default.removeItem(at: temporaryPDF) }
 
-        setStatus(.converting, for: id)
+        guard await convert(job, to: temporaryPDF) else { return }
+
+        guard let destination = await destination(for: job) else {
+            setStatus(.skipped, for: id)
+            return
+        }
+        save(temporaryPDF, to: destination, for: [id])
+    }
+
+    /// Converts every file of `batch`, then joins them into one PDF and saves it once.
+    private func processMerged(batch: UUID) async {
+        let ids = jobs.filter { $0.batch == batch && $0.status == .waiting }.map(\.id)
+        var parts: [(title: String, url: URL)] = []
+        var convertedIDs: [UUID] = []
+        defer { parts.forEach { try? FileManager.default.removeItem(at: $0.url) } }
+
+        for id in ids {
+            guard let job = jobs.first(where: { $0.id == id }) else { continue }
+            let temporaryPDF = FileManager.default.temporaryDirectory
+                .appendingPathComponent("markdownToPdf-\(UUID().uuidString).pdf")
+            if await convert(job, to: temporaryPDF) {
+                setStatus(.converted, for: id)
+                parts.append((job.baseName, temporaryPDF))
+                convertedIDs.append(id)
+            }
+        }
+        guard let firstID = convertedIDs.first, let first = jobs.first(where: { $0.id == firstID }) else { return }
+
+        let mergedPDF = FileManager.default.temporaryDirectory
+            .appendingPathComponent("markdownToPdf-\(UUID().uuidString).pdf")
+        defer { try? FileManager.default.removeItem(at: mergedPDF) }
+        do {
+            try PDFMerger.merge(parts, into: mergedPDF)
+        } catch {
+            convertedIDs.forEach { setStatus(.failed(error.localizedDescription), for: $0) }
+            return
+        }
+
+        guard let destination = await mergedDestination(first: first) else {
+            convertedIDs.forEach { setStatus(.skipped, for: $0) }
+            return
+        }
+        save(mergedPDF, to: destination, for: convertedIDs)
+    }
+
+    /// Renders one job into `temporaryPDF`. Marks the job failed and returns false on error.
+    private func convert(_ job: ConversionJob, to temporaryPDF: URL) async -> Bool {
+        setStatus(.converting, for: job.id)
         do {
             let started = Date()
             switch job.input {
@@ -155,16 +211,15 @@ final class ConversionQueue: ObservableObject {
             if elapsed < 0.6 {
                 try? await Task.sleep(nanoseconds: UInt64((0.6 - elapsed) * 1_000_000_000))
             }
+            return true
         } catch {
-            setStatus(.failed(error.localizedDescription), for: id)
-            return
+            setStatus(.failed(error.localizedDescription), for: job.id)
+            return false
         }
+    }
 
-        guard let destination = await destination(for: job) else {
-            setStatus(.skipped, for: id)
-            return
-        }
-
+    /// Moves the finished PDF into place and marks `ids` as saved.
+    private func save(_ temporaryPDF: URL, to destination: URL, for ids: [UUID]) {
         do {
             let fileManager = FileManager.default
             if fileManager.fileExists(atPath: destination.path) {
@@ -173,10 +228,26 @@ final class ConversionQueue: ObservableObject {
                 try fileManager.moveItem(at: temporaryPDF, to: destination)
             }
             preferences.lastSaveFolder = destination.deletingLastPathComponent()
-            setStatus(.saved(destination), for: id)
+            ids.forEach { setStatus(.saved(destination), for: $0) }
         } catch {
-            setStatus(.failed(L10n.errorSave), for: id)
+            ids.forEach { setStatus(.failed(L10n.errorSave), for: $0) }
         }
+    }
+
+    /// Where a merged PDF goes. Same rules as single files, with one dialog at most.
+    private func mergedDestination(first: ConversionJob) async -> URL? {
+        let name = L10n.mergedFileName
+        switch preferences.saveMode {
+        case .nextToSource:
+            if let folder = first.sourceFolder { return Self.uniquePDFURL(in: folder, named: name) }
+        case .folder:
+            if let folder = preferences.existingSaveFolder { return Self.uniquePDFURL(in: folder, named: name) }
+            notice = L10n.saveFolderMissing
+        case .ask:
+            break
+        }
+        setStatus(.awaitingSave, for: first.id)
+        return await askForDestination(named: name, startingIn: startFolder(for: first))
     }
 
     /// Where the PDF for `job` goes, following the save setting.
@@ -200,7 +271,7 @@ final class ConversionQueue: ObservableObject {
 
         guard job.isPartOfBatch else {
             setStatus(.awaitingSave, for: job.id)
-            return await askForDestination(for: job)
+            return await askForDestination(named: job.baseName, startingIn: startFolder(for: job))
         }
 
         if let folder = batchFolders[job.batch] {
@@ -247,15 +318,15 @@ final class ConversionQueue: ObservableObject {
             ?? FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
     }
 
-    private func askForDestination(for job: ConversionJob) async -> URL? {
+    private func askForDestination(named baseName: String, startingIn folder: URL?) async -> URL? {
         let panel = NSSavePanel()
         panel.title = L10n.savePanelTitle
         panel.prompt = L10n.savePanelButton
         panel.allowedContentTypes = [.pdf]
         panel.canCreateDirectories = true
         panel.isExtensionHidden = false
-        panel.directoryURL = startFolder(for: job)
-        panel.nameFieldStringValue = job.baseName + ".pdf"
+        panel.directoryURL = folder
+        panel.nameFieldStringValue = baseName + ".pdf"
 
         return await present(panel) == .OK ? panel.url : nil
     }

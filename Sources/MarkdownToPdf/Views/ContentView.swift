@@ -144,6 +144,9 @@ private struct OptionsBar: View {
             .fixedSize()
             .help(preferences.saveMode == .folder ? (preferences.saveFolder?.path ?? "") : "")
             Spacer()
+            Toggle(L10n.mergeIntoOne, isOn: $preferences.mergeIntoOne)
+                .toggleStyle(.checkbox)
+                .help(L10n.mergeHelp)
         }
         .font(.callout)
     }
@@ -221,6 +224,8 @@ private struct JobRow: View {
             ProgressView().controlSize(.small)
         case .awaitingSave:
             Text(L10n.statusAwaitingSave).foregroundStyle(.secondary).font(.callout)
+        case .converted:
+            Text(L10n.statusConverted).foregroundStyle(.secondary).font(.callout)
         case .saved(let url):
             Button {
                 NSWorkspace.shared.activateFileViewerSelecting([url])
@@ -248,6 +253,7 @@ private struct LoadingOverlay: View {
 
     private var title: String {
         if isConverting { return L10n.loadingConverting }
+        if job.merge { return L10n.loadingSavingMerged }
         return job.isPartOfBatch ? L10n.loadingChooseFolder : L10n.loadingSaving
     }
 

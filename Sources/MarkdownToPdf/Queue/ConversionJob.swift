@@ -11,6 +11,8 @@ struct ConversionJob: Identifiable, Equatable {
         case waiting
         case converting
         case awaitingSave
+        /// Converted and waiting for the other files it will be merged with.
+        case converted
         case saved(URL)
         case skipped
         case failed(String)
@@ -18,7 +20,7 @@ struct ConversionJob: Identifiable, Equatable {
         var isFinished: Bool {
             switch self {
             case .saved, .skipped, .failed: return true
-            case .waiting, .converting, .awaitingSave: return false
+            case .waiting, .converting, .awaitingSave, .converted: return false
             }
         }
     }
@@ -32,6 +34,8 @@ struct ConversionJob: Identifiable, Equatable {
     /// Items added together (one drop, one Open panel) share a batch and a save folder.
     let batch: UUID
     let batchSize: Int
+    /// Part of a batch that becomes a single PDF.
+    var merge = false
     var status: Status = .waiting
 
     var isPartOfBatch: Bool { batchSize > 1 }

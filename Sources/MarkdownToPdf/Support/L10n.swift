@@ -30,6 +30,15 @@ enum L10n {
     static let statusSaved = t("Saved", "Kaydedildi")
     static let statusSkipped = t("Not saved", "Kaydedilmedi")
     static let statusFailed = t("Failed", "Başarısız")
+    static let statusConverted = t("Ready to merge", "Birleştirilmeyi bekliyor")
+    static let mergeIntoOne = t("Merge into one PDF", "Tek PDF'te birleştir")
+    static let mergeHelp = t(
+        "Files dropped together become one PDF, each starting on a new page.",
+        "Birlikte bırakılan dosyalar tek PDF olur; her dosya yeni sayfadan başlar."
+    )
+    static let mergedFileName = t("Merged", "Birleştirilmiş")
+    static let loadingSavingMerged = t("Choose where to save the merged PDF", "Birleştirilmiş PDF'in kaydedileceği yeri seçin")
+    static let errorMerge = t("The PDFs could not be merged.", "PDF'ler birleştirilemedi.")
 
     static let menuOpen = t("Open", "Aç")
     static let menuShowInFinder = t("Show in Finder", "Finder'da Göster")

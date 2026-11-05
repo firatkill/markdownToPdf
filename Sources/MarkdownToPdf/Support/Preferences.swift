@@ -19,6 +19,7 @@ final class Preferences: ObservableObject {
         static let saveMode = "saveMode"
         static let saveFolder = "saveFolderPath"
         static let lastSaveFolder = "lastSaveFolderPath"
+        static let mergeIntoOne = "mergeIntoOne"
     }
 
     private let defaults = UserDefaults.standard
@@ -31,6 +32,11 @@ final class Preferences: ObservableObject {
         didSet { defaults.set(saveFolder?.path, forKey: Key.saveFolder) }
     }
 
+    /// Several files dropped together become one PDF.
+    @Published var mergeIntoOne: Bool {
+        didSet { defaults.set(mergeIntoOne, forKey: Key.mergeIntoOne) }
+    }
+
     /// Folder of the last saved PDF; dialogs for pasted text open here.
     var lastSaveFolder: URL? {
         get { defaults.string(forKey: Key.lastSaveFolder).map { URL(fileURLWithPath: $0, isDirectory: true) } }
@@ -39,6 +45,7 @@ final class Preferences: ObservableObject {
 
     private init() {
         saveMode = SaveMode(rawValue: defaults.string(forKey: Key.saveMode) ?? "") ?? .ask
+        mergeIntoOne = defaults.bool(forKey: Key.mergeIntoOne)
         saveFolder = defaults.string(forKey: Key.saveFolder).map { URL(fileURLWithPath: $0, isDirectory: true) }
         if saveMode == .folder && saveFolder == nil {
             saveMode = .ask
