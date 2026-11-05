@@ -112,22 +112,21 @@ enum L10n {
 
     static let tabConvert = t("Convert", "Dönüştür")
     static let tabPreview = t("Preview", "Önizle")
-    static let previewDropTitle = t("Drop a Markdown file to read it", "Okumak için Markdown dosyası bırakın")
-    static let previewDropSubtitle = t(
-        "Or paste Markdown text with ⌘V. It is shown exactly as the PDF will look; nothing is saved until you ask.",
-        "Ya da Markdown metnini ⌘V ile yapıştırın. PDF'te nasıl görünecekse öyle gösterilir; siz istemedikçe hiçbir şey kaydedilmez."
+    static let editorTitle = t("Markdown", "Markdown")
+    static let editorPlaceholderTitle = t("Write or paste Markdown", "Markdown yazın ya da yapıştırın")
+    static let editorPlaceholder = t(
+        "Paste with ⌘V or drop a .md file here. The PDF appears on the right and follows every change.",
+        "⌘V ile yapıştırın ya da buraya bir .md dosyası bırakın. PDF sağda görünür ve her değişikliği takip eder."
     )
+    static let editorClear = t("Clear the editor", "Editörü temizle")
+    static let previewExpand = t("Expand the PDF over the editor", "PDF'i editörün üstüne genişlet")
+    static let previewCollapse = t("Show the editor again", "Editörü tekrar göster")
     static let previewOpenFile = t("Open File…", "Dosya Aç…")
     static let previewOpenMessage = t("Choose a Markdown file to preview", "Önizlenecek Markdown dosyasını seçin")
-    static let previewLoading = t("Preparing preview", "Önizleme hazırlanıyor")
-    static let previewFailed = t("Couldn't show this document", "Bu belge gösterilemedi")
-    static let previewStartOver = t("Start Over", "Baştan Başla")
     static let previewShowsOne = t(
         "Preview shows one file at a time; the first one is shown.",
         "Önizleme tek seferde bir dosya gösterir; ilk dosya gösteriliyor."
     )
-    static let previewReload = t("Reload (⌘R)", "Yeniden yükle (⌘R)")
-    static let previewClose = t("Close", "Kapat")
     static let saveAsPDF = t("Save as PDF", "PDF olarak kaydet")
     static func previewSaved(_ name: String) -> String { t("Saved \(name)", "\(name) kaydedildi") }
     static func pageCount(_ count: Int) -> String {

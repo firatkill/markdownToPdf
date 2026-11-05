@@ -8,7 +8,7 @@ import UniformTypeIdentifiers
 /// save every file of that batch into it without asking again.
 @MainActor
 final class ConversionQueue: ObservableObject {
-    static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "mkdn", "txt"]
+    nonisolated static let markdownExtensions: Set<String> = ["md", "markdown", "mdown", "mkd", "mkdn", "txt"]
 
     @Published private(set) var jobs: [ConversionJob] = []
     @Published private(set) var isProcessing = false

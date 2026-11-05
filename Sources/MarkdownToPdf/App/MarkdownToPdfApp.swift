@@ -14,7 +14,7 @@ struct MarkdownToPdfApp: App {
                 .frame(minWidth: 480, minHeight: 460)
         }
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 620, height: 720)
+        .defaultSize(width: 980, height: 720)
         .commands {
             AppCommands(appState: appDelegate.appState, queue: appDelegate.queue, preview: appDelegate.preview)
         }
@@ -52,16 +52,13 @@ struct AppCommands: Commands {
         CommandGroup(replacing: .saveItem) {
             Button(L10n.saveAsPDF + "…") { preview.save() }
                 .keyboardShortcut("s")
-                .disabled(appState.tab != .preview || preview.document == nil)
+                .disabled(appState.tab != .preview || !preview.hasContent)
         }
         CommandGroup(before: .toolbar) {
             Button(L10n.tabConvert) { appState.tab = .convert }
                 .keyboardShortcut("1")
             Button(L10n.tabPreview) { appState.tab = .preview }
                 .keyboardShortcut("2")
-            Button(L10n.previewReload.replacingOccurrences(of: " (⌘R)", with: "")) { preview.reload() }
-                .keyboardShortcut("r")
-                .disabled(appState.tab != .preview || preview.document == nil)
             Divider()
         }
     }

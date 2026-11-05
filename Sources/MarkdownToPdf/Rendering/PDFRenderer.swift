@@ -77,7 +77,7 @@ final class PDFRenderer: NSObject {
 
     // MARK: - Steps
 
-    private static func readText(at url: URL) throws -> String {
+    static func readText(at url: URL) throws -> String {
         guard let data = try? Data(contentsOf: url) else { throw PDFRendererError.unreadableFile }
         for encoding in [String.Encoding.utf8, .utf16, .windowsCP1254, .isoLatin1] {
             if let text = String(data: data, encoding: encoding) { return text }

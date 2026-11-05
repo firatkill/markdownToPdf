@@ -1,177 +1,204 @@
 import PDFKit
 import SwiftUI
 
-/// The Preview tab: shows a Markdown file or pasted text as the PDF it would become.
+/// The Preview tab: a Markdown editor on the left, its live PDF on the right.
+/// The PDF pane appears once there is text and can expand over the editor.
 struct PreviewView: View {
     @EnvironmentObject private var model: PreviewModel
-    @State private var isTargeted = false
 
     var body: some View {
-        content
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .onDrop(of: [.fileURL, .plainText], isTargeted: $isTargeted) { providers in
-                DropLoader.load(providers) { urls, text in
-                    if let text {
-                        model.load(text: text)
-                    } else {
-                        model.load(urls: urls)
-                    }
-                }
-            }
-            .overlay {
-                if isTargeted, model.document != nil {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
-                        .padding(8)
-                        .allowsHitTesting(false)
-                }
-            }
-    }
+        GeometryReader { geometry in
+            let half = (geometry.size.width / 2).rounded()
+            ZStack(alignment: .topLeading) {
+                // The editor stays in place (keeping focus and undo); the PDF pane covers part of it.
+                EditorPane()
+                    .frame(width: model.hasContent ? half : geometry.size.width)
 
-    @ViewBuilder private var content: some View {
-        switch model.state {
-        case .empty:
-            emptyState
-        case .loading(let title):
-            VStack(spacing: 14) {
-                ProgressView().controlSize(.large)
-                Text(L10n.previewLoading).font(.title3.weight(.semibold))
-                Text(title).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                if model.hasContent {
+                    PDFPane()
+                        .frame(width: model.isExpanded ? geometry.size.width : geometry.size.width - half)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .transition(.move(edge: .trailing))
+                }
             }
-        case .failed(let message):
-            VStack(spacing: 14) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 36, weight: .light))
-                    .foregroundStyle(.orange)
-                Text(L10n.previewFailed).font(.title3.weight(.semibold))
-                Text(message).font(.callout).foregroundStyle(.secondary)
-                Button(L10n.previewStartOver) { model.close() }
-            }
-            .padding(20)
-        case .ready(let document):
-            VStack(spacing: 0) {
-                PreviewHeader(document: document)
-                Divider()
-                PDFKitView(document: document.pdf)
-            }
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
         }
+        .animation(.easeInOut(duration: 0.22), value: model.isExpanded)
+        .animation(.easeInOut(duration: 0.22), value: model.hasContent)
     }
+}
 
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 12) {
-                Image(systemName: isTargeted ? "arrow.down.doc.fill" : "doc.text.magnifyingglass")
-                    .font(.system(size: 44, weight: .light))
-                    .foregroundStyle(isTargeted ? Color.accentColor : .secondary)
-                    .symbolRenderingMode(.hierarchical)
-                Text(L10n.previewDropTitle).font(.title3.weight(.semibold))
-                Text(L10n.previewDropSubtitle)
-                    .font(.callout)
+// MARK: - Editor
+
+private struct EditorPane: View {
+    @EnvironmentObject private var model: PreviewModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Image(systemName: model.sourceURL == nil ? "square.and.pencil" : "doc.text")
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                HStack(spacing: 10) {
-                    Button(L10n.previewOpenFile) { model.openFile() }
+                Text(model.hasContent ? model.title : L10n.editorTitle)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Button(L10n.previewOpenFile) { model.openFile() }
+                if model.hasContent {
                     Button {
-                        model.pasteFromClipboard()
+                        model.clear()
                     } label: {
-                        Label(L10n.pasteFromClipboard, systemImage: "doc.on.clipboard")
+                        Image(systemName: "trash")
                     }
-                    .help("⌘V")
+                    .help(L10n.editorClear)
                 }
-                .controlSize(.large)
-                .padding(.top, 4)
             }
-            .padding(28)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isTargeted ? Color.accentColor.opacity(0.08) : Color.primary.opacity(0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(
-                        isTargeted ? Color.accentColor : Color.secondary.opacity(0.4),
-                        style: StrokeStyle(lineWidth: 2, dash: [8, 6])
-                    )
-            )
+            .padding(.horizontal, 14)
+            .frame(height: 48)
+
+            Divider()
+
+            ZStack(alignment: .topLeading) {
+                MarkdownEditor(
+                    text: $model.text,
+                    onOpenFile: { model.open($0) },
+                    onUnsupportedFile: { model.notice = L10n.unsupportedFiles }
+                )
+
+                if !model.hasContent {
+                    VStack(spacing: 10) {
+                        Image(systemName: "doc.text.magnifyingglass")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundStyle(.tertiary)
+                        Text(L10n.editorPlaceholderTitle)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(L10n.editorPlaceholder)
+                            .font(.callout)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 360)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
+                }
+            }
 
             if let notice = model.notice {
+                Divider()
                 Label(notice, systemImage: "exclamationmark.triangle.fill")
                     .font(.callout)
                     .foregroundStyle(.orange)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
             }
         }
-        .padding(20)
-        .animation(.easeOut(duration: 0.15), value: isTargeted)
+        .background(Color(nsColor: .textBackgroundColor))
     }
 }
 
-/// Title, page count and actions above the previewed PDF.
-private struct PreviewHeader: View {
+// MARK: - PDF
+
+private struct PDFPane: View {
     @EnvironmentObject private var model: PreviewModel
-    let document: PreviewModel.Document
+    @State private var isTargeted = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                Image(systemName: document.isPasted ? "doc.on.clipboard" : "doc.text")
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(document.title)
-                        .font(.headline)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Text(L10n.pageCount(document.pdf.pageCount))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button {
-                    model.reload()
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .help(L10n.previewReload)
-                Button {
-                    model.close()
-                } label: {
-                    Image(systemName: "xmark")
-                }
-                .help(L10n.previewClose)
-                Button {
-                    model.save()
-                } label: {
-                    Label(L10n.saveAsPDF, systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(.borderedProminent)
-                .help("⌘S")
-            }
-
-            if let saved = model.lastSaved {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                    Text(L10n.previewSaved(saved.lastPathComponent)).lineLimit(1).truncationMode(.middle)
-                    Button(L10n.menuShowInFinder) {
-                        NSWorkspace.shared.activateFileViewerSelecting([saved])
+        HStack(spacing: 0) {
+            Divider()
+            VStack(spacing: 0) {
+                header
+                Divider()
+                ZStack {
+                    Color(nsColor: .underPageBackgroundColor)
+                    if let pdf = model.pdf {
+                        PDFKitView(document: pdf, isExpanded: model.isExpanded)
+                    } else if let error = model.renderError {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.secondary)
+                            .padding()
+                    } else {
+                        ProgressView()
                     }
-                    .buttonStyle(.link)
                 }
-                .font(.callout)
-            } else if let notice = model.notice {
-                Label(notice, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
-                    .foregroundStyle(.orange)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .onDrop(of: [.fileURL, .plainText], isTargeted: $isTargeted) { providers in
+            DropLoader.load(providers) { urls, text in
+                if let text {
+                    model.insert(text: text)
+                } else {
+                    model.load(urls: urls)
+                }
+            }
+        }
+        .overlay {
+            if isTargeted {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+                    .padding(6)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("PDF").font(.headline)
+                Group {
+                    if let saved = model.lastSaved {
+                        Button(L10n.previewSaved(saved.lastPathComponent)) {
+                            NSWorkspace.shared.activateFileViewerSelecting([saved])
+                        }
+                        .buttonStyle(.link)
+                        .help(L10n.menuShowInFinder)
+                    } else if let pdf = model.pdf {
+                        Text(L10n.pageCount(pdf.pageCount)).foregroundStyle(.secondary)
+                    }
+                }
+                .font(.caption)
+                .lineLimit(1)
+            }
+            if model.isRendering {
+                ProgressView().controlSize(.small)
+            }
+            Spacer()
+            Button {
+                model.save()
+            } label: {
+                Label(L10n.saveAsPDF, systemImage: "square.and.arrow.down")
+            }
+            .buttonStyle(.borderedProminent)
+            .help("⌘S")
+            Button {
+                model.isExpanded.toggle()
+            } label: {
+                Image(systemName: model.isExpanded
+                      ? "arrow.down.right.and.arrow.up.left"
+                      : "arrow.up.left.and.arrow.down.right")
+            }
+            .help(model.isExpanded ? L10n.previewCollapse : L10n.previewExpand)
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 48)
     }
 }
 
 /// PDFKit's viewer: scrollable pages, zoom with pinch or ⌘+/⌘−, text selection and copy.
+/// When the document is replaced (after an edit) or the pane is resized (expand/collapse),
+/// it stays on the same page and position.
 struct PDFKitView: NSViewRepresentable {
     let document: PDFDocument
+    let isExpanded: Bool
+
+    final class Coordinator {
+        var isExpanded = false
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeNSView(context: Context) -> PDFView {
         let view = PDFView()
@@ -180,13 +207,42 @@ struct PDFKitView: NSViewRepresentable {
         view.displaysPageBreaks = true
         view.backgroundColor = .underPageBackgroundColor
         view.document = document
+        context.coordinator.isExpanded = isExpanded
         return view
     }
 
     func updateNSView(_ view: PDFView, context: Context) {
-        if view.document !== document {
-            view.document = document
+        if context.coordinator.isExpanded != isExpanded {
+            context.coordinator.isExpanded = isExpanded
+            keepPosition(of: view)
+        }
+        guard view.document !== document else { return }
+
+        let oldDocument = view.document
+        let pageIndex = view.currentPage.flatMap { oldDocument?.index(for: $0) } ?? 0
+        let point = view.currentDestination?.point
+        let scale = view.scaleFactor
+        let autoScales = view.autoScales
+
+        view.document = document
+        if autoScales {
             view.autoScales = true
+        } else {
+            view.scaleFactor = scale
+        }
+        if document.pageCount > 0, let point,
+           let page = document.page(at: min(pageIndex, document.pageCount - 1)) {
+            view.go(to: PDFDestination(page: page, at: point))
+        }
+    }
+
+    /// Autoscaling after a width change zooms around the centre; jump back to what was at the top.
+    private func keepPosition(of view: PDFView) {
+        guard let page = view.currentPage, let point = view.currentDestination?.point else { return }
+        let destination = PDFDestination(page: page, at: point)
+        // After the expand/collapse animation has resized the view.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            view.go(to: destination)
         }
     }
 }
