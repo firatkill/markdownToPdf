@@ -13,6 +13,12 @@
   <a href="#türkçe">Türkçe</a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/preview.png" width="820" alt="The Preview tab: a Markdown editor on the left, the live PDF on the right">
+  <br>
+  <sub>Preview tab: edit Markdown on the left, read the PDF on the right as it updates.</sub>
+</p>
+
 ---
 
 ## Features
@@ -33,11 +39,24 @@
 - Converting works offline; nothing you convert leaves your Mac. The only network request is a once-a-day version check against GitHub.
 - Universal app: Apple silicon and Intel, macOS 13 Ventura or later.
 
-<p align="center">
-  <img src="docs/sample-page.png" width="420" alt="First page of the PDF made from Examples/sample.md">
-  <br>
-  <sub>Page 1 of the PDF made from <a href="Examples/sample.md">Examples/sample.md</a></sub>
-</p>
+### Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/converting.png" alt="Converting four files: loading screen showing file 2 of 4"></td>
+    <td width="50%"><img src="docs/screenshots/convert.png" alt="Convert tab with four saved PDFs in the list"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Several files are converted one after another.</sub></td>
+    <td align="center"><sub>Saved PDFs stay in the list, even after a restart.</sub></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="docs/screenshots/preview-expanded.png" alt="The PDF expanded over the editor for reading"></td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><sub>The expand button widens the PDF over the editor for reading.</sub></td>
+  </tr>
+</table>
 
 ## Installation
 
