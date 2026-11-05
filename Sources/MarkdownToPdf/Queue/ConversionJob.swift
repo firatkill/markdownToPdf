@@ -71,8 +71,9 @@ struct ConversionJob: Identifiable, Equatable {
         let candidate = heading ?? lines.first { !$0.isEmpty } ?? ""
 
         let forbidden = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.controlCharacters)
-        var cleaned = candidate.unicodeScalars.map { forbidden.contains($0) ? "-" : String($0) }.joined()
-        cleaned = cleaned.trimmingCharacters(in: CharacterSet(charactersIn: " .-"))
+        var cleaned = candidate.unicodeScalars.map { forbidden.contains($0) ? " " : String($0) }.joined()
+        cleaned = cleaned.split(separator: " ", omittingEmptySubsequences: true).joined(separator: " ")
+        cleaned = cleaned.trimmingCharacters(in: CharacterSet(charactersIn: " ."))
         if cleaned.count > 60 {
             cleaned = String(cleaned.prefix(60)).trimmingCharacters(in: .whitespaces)
         }
