@@ -19,12 +19,14 @@ enum MarkdownHTML {
         <meta charset="utf-8">
         <base href="\(escapeAttribute(baseURL.absoluteString))">
         <title>\(escapeText(title))</title>
+        <style>\(WebResources.highlightStylesheet)</style>
         <style>\(stylesheet)</style>
         </head>
         <body>
         <article class="markdown-body">
         \(body)
         </article>
+        \(highlightScript)
         </body>
         </html>
         """
@@ -39,6 +41,21 @@ enum MarkdownHTML {
 
     static func escapeAttribute(_ value: String) -> String {
         escapeText(value).replacingOccurrences(of: "\"", with: "&quot;")
+    }
+
+    /// Colours fenced code blocks that name a language (```swift, ```python, …).
+    /// Runs before the page's load event, so the PDF is printed already highlighted.
+    private static var highlightScript: String {
+        let library = WebResources.highlightScript
+        guard !library.isEmpty else { return "" }
+        return """
+        <script>\(library)</script>
+        <script>
+        document.querySelectorAll('pre code[class*="language-"]').forEach(function (block) {
+          try { hljs.highlightElement(block); } catch (error) {}
+        });
+        </script>
+        """
     }
 
     /// A GitHub-like stylesheet tuned for paper.
@@ -105,7 +122,7 @@ enum MarkdownHTML {
       page-break-inside: avoid;
       break-inside: avoid;
     }
-    pre code { padding: 0; background: transparent; border-radius: 0; font-size: 1em; }
+    pre code, pre code.hljs { padding: 0; background: transparent; border-radius: 0; font-size: 1em; }
     table {
       display: table;
       width: auto;

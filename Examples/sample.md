@@ -40,6 +40,27 @@ let renderer = PDFRenderer()
 try await renderer.render(source, to: destination)
 ```
 
+## More code
+
+```python
+def greet(name: str) -> str:
+    # Say hello
+    return f"Merhaba, {name}!"
+```
+
+```javascript
+const total = [1, 2, 3].reduce((sum, n) => sum + n, 0);
+console.log(`Total: ${total}`);
+```
+
+HTML inside code stays as text: `<div class="x">` and
+
+```html
+<p>Hello & welcome</p>
+```
+
+Comparisons are not tags: a < b > c. @mentions stay visible.
+
 ---
 
 ### Section 1
@@ -89,4 +110,3 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor i
 ### Section 12
 
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
