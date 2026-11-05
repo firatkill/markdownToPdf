@@ -9,7 +9,8 @@ enum MarkdownHTML {
     ///   - title: Used for the `<title>` element.
     ///   - baseURL: The folder of the source file, so relative image paths resolve.
     static func document(from markdown: String, title: String, baseURL: URL) -> String {
-        let document = Document(parsing: markdown, options: [.parseBlockDirectives])
+        var escaper = HTMLEscaper()
+        let document = escaper.visit(Document(parsing: markdown)) ?? Document()
         let body = HTMLFormatter.format(document)
         return """
         <!doctype html>
@@ -29,14 +30,14 @@ enum MarkdownHTML {
         """
     }
 
-    private static func escapeText(_ value: String) -> String {
+    static func escapeText(_ value: String) -> String {
         value
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;")
     }
 
-    private static func escapeAttribute(_ value: String) -> String {
+    static func escapeAttribute(_ value: String) -> String {
         escapeText(value).replacingOccurrences(of: "\"", with: "&quot;")
     }
 
