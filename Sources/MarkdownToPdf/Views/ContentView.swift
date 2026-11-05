@@ -176,17 +176,35 @@ private struct JobList: View {
                 }
             }
 
-            List(queue.jobs) { job in
-                JobRow(job: job)
+            ScrollViewReader { proxy in
+                List(queue.jobs) { job in
+                    JobRow(job: job) { queue.remove(job.id) }
+                        .id(job.id)
+                }
+                .listStyle(.inset(alternatesRowBackgrounds: true))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .onAppear { scrollToEnd(proxy) }
+                .onChange(of: queue.jobs.count) { _ in scrollToEnd(proxy) }
             }
-            .listStyle(.inset(alternatesRowBackgrounds: true))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
+    }
+
+    /// Newest items are at the bottom; keep them in view.
+    private func scrollToEnd(_ proxy: ScrollViewProxy) {
+        guard let last = queue.jobs.last?.id else { return }
+        DispatchQueue.main.async { proxy.scrollTo(last, anchor: .bottom) }
     }
 }
 
 private struct JobRow: View {
     let job: ConversionJob
+    let remove: () -> Void
+
+    /// For saved items: whether the PDF is still on disk.
+    private var savedFileExists: Bool {
+        guard case .saved(let url) = job.status else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -201,6 +219,10 @@ private struct JobRow: View {
                 }
                 if case .failed(let reason) = job.status {
                     Text(reason).font(.caption).foregroundStyle(.red).lineLimit(2)
+                } else if let date = job.finishedAt {
+                    Text(date.formatted(.relative(presentation: .named)))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()
@@ -211,7 +233,13 @@ private struct JobRow: View {
         .contextMenu {
             if case .saved(let url) = job.status {
                 Button(L10n.menuOpen) { NSWorkspace.shared.open(url) }
+                    .disabled(!savedFileExists)
                 Button(L10n.menuShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                    .disabled(!savedFileExists)
+            }
+            if job.status.isFinished {
+                Divider()
+                Button(L10n.menuRemoveFromList, action: remove)
             }
         }
     }
@@ -226,6 +254,10 @@ private struct JobRow: View {
             Text(L10n.statusAwaitingSave).foregroundStyle(.secondary).font(.callout)
         case .converted:
             Text(L10n.statusConverted).foregroundStyle(.secondary).font(.callout)
+        case .saved where !savedFileExists:
+            Label(L10n.fileMissing, systemImage: "questionmark.circle")
+                .foregroundStyle(.secondary)
+                .font(.callout)
         case .saved(let url):
             Button {
                 NSWorkspace.shared.activateFileViewerSelecting([url])

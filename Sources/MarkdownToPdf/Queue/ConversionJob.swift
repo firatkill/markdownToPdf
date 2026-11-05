@@ -5,6 +5,8 @@ struct ConversionJob: Identifiable, Equatable {
     enum Input: Equatable {
         case file(URL)
         case text(String)
+        /// Loaded from the history list; there is nothing left to convert.
+        case history
     }
 
     enum Status: Equatable {
@@ -34,16 +36,15 @@ struct ConversionJob: Identifiable, Equatable {
     /// Items added together (one drop, one Open panel) share a batch and a save folder.
     let batch: UUID
     let batchSize: Int
+    /// Came from the clipboard or a text service rather than a file.
+    let isPasted: Bool
     /// Part of a batch that becomes a single PDF.
     var merge = false
     var status: Status = .waiting
+    /// When the PDF was saved.
+    var finishedAt: Date?
 
     var isPartOfBatch: Bool { batchSize > 1 }
-
-    var isPasted: Bool {
-        if case .text = input { return true }
-        return false
-    }
 
     var sourceURL: URL? {
         if case .file(let url) = input { return url }
@@ -59,13 +60,34 @@ struct ConversionJob: Identifiable, Equatable {
             name: url.lastPathComponent,
             baseName: url.deletingPathExtension().lastPathComponent,
             batch: batch,
-            batchSize: batchSize
+            batchSize: batchSize,
+            isPasted: false
+        )
+    }
+
+    static func restored(name: String, pdf: URL, date: Date, isPasted: Bool) -> ConversionJob {
+        ConversionJob(
+            input: .history,
+            name: name,
+            baseName: pdf.deletingPathExtension().lastPathComponent,
+            batch: UUID(),
+            batchSize: 1,
+            isPasted: isPasted,
+            status: .saved(pdf),
+            finishedAt: date
         )
     }
 
     static func text(_ markdown: String) -> ConversionJob {
         let title = suggestedTitle(for: markdown)
-        return ConversionJob(input: .text(markdown), name: title, baseName: title, batch: UUID(), batchSize: 1)
+        return ConversionJob(
+            input: .text(markdown),
+            name: title,
+            baseName: title,
+            batch: UUID(),
+            batchSize: 1,
+            isPasted: true
+        )
     }
 
     /// The first heading (or first line) of the text, usable as a file name.

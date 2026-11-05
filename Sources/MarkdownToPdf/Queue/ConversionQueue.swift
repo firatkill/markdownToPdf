@@ -16,6 +16,7 @@ final class ConversionQueue: ObservableObject {
 
     private let renderer = PDFRenderer()
     private let preferences = Preferences.shared
+    private let history = HistoryStore()
     /// Index (within the current batch) of the file being worked on, for "File 2 of 5".
     private var batchStart = 0
     /// Save folder chosen for each multi-file batch.
@@ -35,6 +36,11 @@ final class ConversionQueue: ObservableObject {
     }
 
     var hasFinishedJobs: Bool { jobs.contains { $0.status.isFinished } }
+
+    init() {
+        jobs = history.load()
+        batchStart = jobs.count
+    }
 
     // MARK: - Adding files
 
@@ -115,6 +121,15 @@ final class ConversionQueue: ObservableObject {
     func clearFinished() {
         jobs.removeAll { $0.status.isFinished }
         batchStart = jobs.firstIndex { !$0.status.isFinished } ?? jobs.count
+        history.save(jobs)
+    }
+
+    /// Removes one finished item from the list (the PDF itself stays where it is).
+    func remove(_ id: UUID) {
+        guard let index = jobs.firstIndex(where: { $0.id == id }), jobs[index].status.isFinished else { return }
+        jobs.remove(at: index)
+        if index < batchStart { batchStart -= 1 }
+        history.save(jobs)
     }
 
     // MARK: - Processing
@@ -205,6 +220,9 @@ final class ConversionQueue: ObservableObject {
                     baseURL: FileManager.default.homeDirectoryForCurrentUser,
                     to: temporaryPDF
                 )
+            case .history:
+                // History items are already saved and never reach the queue.
+                return false
             }
             // Keep the loading screen up long enough to be read rather than flash.
             let elapsed = Date().timeIntervalSince(started)
@@ -343,5 +361,9 @@ final class ConversionQueue: ObservableObject {
     private func setStatus(_ status: ConversionJob.Status, for id: UUID) {
         guard let index = jobs.firstIndex(where: { $0.id == id }) else { return }
         jobs[index].status = status
+        if case .saved = status {
+            jobs[index].finishedAt = Date()
+            history.save(jobs)
+        }
     }
 }

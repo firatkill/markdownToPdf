@@ -42,6 +42,8 @@ enum L10n {
 
     static let menuOpen = t("Open", "Aç")
     static let menuShowInFinder = t("Show in Finder", "Finder'da Göster")
+    static let menuRemoveFromList = t("Remove from List", "Listeden Kaldır")
+    static let fileMissing = t("File not found", "Dosya bulunamadı")
 
     static let loadingConverting = t("Converting to PDF", "PDF'e dönüştürülüyor")
     static let loadingSaving = t("Choose where to save the PDF", "PDF'in kaydedileceği yeri seçin")
