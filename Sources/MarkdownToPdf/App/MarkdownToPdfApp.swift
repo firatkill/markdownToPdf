@@ -29,6 +29,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isCommandLineMode = false
     private var pasteMonitor: Any?
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        // Finder › right-click › "Convert to PDF" and the text service land here.
+        NSApp.servicesProvider = self
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let job = CommandLineConversion.parse(CommandLine.arguments) {
             isCommandLineMode = true
@@ -40,6 +45,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         installPasteShortcut()
+        NSUpdateDynamicServices()
+    }
+
+    // MARK: - Services (declared under NSServices in Info.plist)
+
+    /// "Convert to PDF" on Markdown files selected in Finder.
+    @objc func convertFiles(
+        _ pasteboard: NSPasteboard,
+        userData: String?,
+        error: AutoreleasingUnsafeMutablePointer<NSString?>
+    ) {
+        let urls = pasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]
+        ) as? [URL] ?? []
+        NSApp.activate(ignoringOtherApps: true)
+        queue.add(urls)
+    }
+
+    /// "Convert Markdown to PDF" on text selected in any app.
+    @objc func convertText(
+        _ pasteboard: NSPasteboard,
+        userData: String?,
+        error: AutoreleasingUnsafeMutablePointer<NSString?>
+    ) {
+        guard let text = pasteboard.string(forType: .string),
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        queue.addText(text)
     }
 
     /// ⌘V in the main window converts the clipboard. Text fields and dialogs
