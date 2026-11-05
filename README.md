@@ -17,7 +17,7 @@
 
 ## Features
 
-- **Two tabs:** **Convert** (the default) turns files into PDFs; **Preview** shows a Markdown file or pasted text as the PDF it would become, so you can just read it, and saves it only if you click **Save as PDF**.
+- **Two tabs:** **Convert** (the default) turns files into PDFs; **Preview** is a Markdown editor with the live PDF beside it. Read a document, edit it and watch the PDF update, and save it only if you click **Save as PDF**.
 - **Drag & drop** one or many `.md` files onto the window, or text dragged from another app.
 - **Paste from the clipboard:** copy Markdown text from anywhere (a chat, a note, an editor), press **⌘V** in the window and get a PDF named after its first heading.
 - **Finder right-click › Convert to PDF** on Markdown files, and **Convert Markdown to PDF** on text selected in any app (macOS Services).
@@ -86,7 +86,13 @@ Tick **Merge into one PDF** to turn files dropped together into a single PDF nam
 
 ### Preview tab
 
-Click **Preview** at the top right (or press ⌘2). Drop a Markdown file, click **Open File…**, or press **⌘V** to paste Markdown text. The document is rendered with the same engine as the converter and shown as real PDF pages: scroll, zoom with a pinch or ⌘+ / ⌘−, select and copy text. Nothing is written to disk until you click **Save as PDF** (⌘S) at the top right, which always asks where to save. **↻** (⌘R) renders the file again after you edit it; **×** closes it. Dropping or pasting something else replaces what is shown. PDFs saved from the preview also appear in the Convert tab's history.
+Click **Preview** at the top right (or press ⌘2). It opens with an empty Markdown editor:
+
+- **Type, paste (⌘V) or drop** a `.md` file into it. Dropping or pasting a file loads its contents; the file itself is never changed.
+- As soon as there is text, the **PDF appears on the right** and follows every edit about half a second after you stop typing, keeping your place in the document.
+- The **expand** button at the top right of the PDF widens it over the editor for reading; click it again to bring the editor back.
+- **Save as PDF** (⌘S) next to it asks where to save. Nothing is written to disk before that, and saved PDFs also appear in the Convert tab's history.
+- The PDF view scrolls, zooms (pinch or ⌘+ / ⌘−) and lets you select and copy text. The trash button clears the editor.
 
 ### Finder and other apps
 
@@ -150,12 +156,12 @@ For development, `swift run` starts the app straight from the package.
 | Merge | PDFKit joins the parts and adds a bookmark per file. | [`PDFMerger.swift`](Sources/MarkdownToPdf/Rendering/PDFMerger.swift) |
 | Queue | Files and pasted text are processed strictly one by one: convert → decide where to save → save → record in history. | [`ConversionQueue.swift`](Sources/MarkdownToPdf/Queue/ConversionQueue.swift) |
 | Services | Finder's "Convert to PDF" and the text service are declared in `Info.plist` and handled by the app delegate. | [`MarkdownToPdfApp.swift`](Sources/MarkdownToPdf/App/MarkdownToPdfApp.swift) |
-| UI | One SwiftUI window with two tabs: Convert (drop zone, file list, loading overlay) and Preview (PDFKit viewer). | [`RootView.swift`](Sources/MarkdownToPdf/Views/RootView.swift), [`PreviewView.swift`](Sources/MarkdownToPdf/Preview/PreviewView.swift) |
+| UI | One SwiftUI window with two tabs: Convert (drop zone, file list, loading overlay) and Preview (Markdown editor and live PDFKit viewer). | [`RootView.swift`](Sources/MarkdownToPdf/Views/RootView.swift), [`PreviewView.swift`](Sources/MarkdownToPdf/Preview/PreviewView.swift) |
 
 ```
 Sources/MarkdownToPdf/
 ├── App/          app entry point, services, ⌘V, command-line mode
-├── Preview/      the Preview tab
+├── Preview/      the Preview tab: editor, live PDF, saving
 ├── Queue/        conversion queue, jobs, history
 ├── Rendering/    Markdown → HTML → PDF, merging
 ├── Support/      settings, update check, English/Turkish strings
@@ -169,8 +175,8 @@ scripts/          build-app.sh, make-icon.swift
 Push a version tag and GitHub Actions builds the universal app and publishes the release:
 
 ```bash
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 The version number in the app comes from the tag (`v1.2.3` → `1.2.3`); local builds use the [`VERSION`](VERSION) file.
@@ -187,7 +193,7 @@ The version number in the app comes from the tag (`v1.2.3` → `1.2.3`); local b
 
 ### Özellikler
 
-- **İki sekme:** **Dönüştür** (varsayılan) dosyaları PDF'e çevirir; **Önizle** bir Markdown dosyasını ya da yapıştırılan metni PDF'te nasıl görünecekse öyle gösterir. Belgeyi doğrudan okursunuz; yalnızca **PDF olarak kaydet**'e tıklarsanız kaydedilir.
+- **İki sekme:** **Dönüştür** (varsayılan) dosyaları PDF'e çevirir; **Önizle** solda bir Markdown editörü, sağda canlı PDF'tir. Belgeyi okursunuz, düzenledikçe PDF güncellenir; yalnızca **PDF olarak kaydet**'e tıklarsanız kaydedilir.
 - Bir ya da birden çok `.md` dosyasını ya da başka bir uygulamadan sürüklediğiniz metni pencereye **sürükleyip bırakın**.
 - **Panodan yapıştırın:** herhangi bir yerden kopyaladığınız Markdown metnini pencerede **⌘V** ile yapıştırın; ilk başlığın adıyla PDF olur.
 - **Finder'da sağ tık › PDF'e Çevir** (Markdown dosyaları için) ve herhangi bir uygulamada seçili metin için **Markdown'ı PDF'e Çevir**.
@@ -233,7 +239,7 @@ Pencere açılmadığında hiçbir dosyanın üzerine yazılmaz: `notlar.pdf` za
 
 **Tek PDF'te birleştir** işaretliyse birlikte bırakılan dosyalar bırakıldıkları sırayla `Birleştirilmiş.pdf` adlı tek bir PDF olur. Her dosya yeni sayfadan başlar ve Önizleme'nin kenar çubuğunda kendi yer imini alır.
 
-**Önizle sekmesi:** sağ üstteki **Önizle**'ye tıklayın (ya da ⌘2). Bir Markdown dosyası bırakın, **Dosya Aç…**'a tıklayın ya da Markdown metnini **⌘V** ile yapıştırın. Belge, dönüştürücüyle aynı motorla oluşturulup gerçek PDF sayfaları olarak gösterilir: kaydırabilir, iki parmakla ya da ⌘+ / ⌘− ile yakınlaştırabilir, metni seçip kopyalayabilirsiniz. Sağ üstteki **PDF olarak kaydet**'e (⌘S) tıklamadıkça diske hiçbir şey yazılmaz; tıkladığınızda nereye kaydedileceği sorulur. **↻** (⌘R) dosyayı düzenledikten sonra yeniden oluşturur, **×** kapatır. Başka bir şey bırakmak ya da yapıştırmak gösterileni değiştirir. Önizlemeden kaydedilen PDF'ler Dönüştür sekmesinin geçmişinde de görünür.
+**Önizle sekmesi:** sağ üstteki **Önizle**'ye tıklayın (ya da ⌘2). Boş bir Markdown editörü açılır. İçine yazın, **⌘V** ile yapıştırın ya da bir `.md` dosyası bırakın (dosyanın içeriği yüklenir, dosyanın kendisi değişmez). Metin olunca **PDF sağda görünür** ve yazmayı bıraktıktan yaklaşık yarım saniye sonra her değişikliği yansıtır; belgede kaldığınız yer korunur. PDF'in sağ üstündeki **genişlet** düğmesi PDF'i editörün üstüne genişletir, tekrar tıklayınca editör geri gelir. Yanındaki **PDF olarak kaydet** (⌘S) nereye kaydedileceğini sorar; o ana kadar diske hiçbir şey yazılmaz. Önizlemeden kaydedilen PDF'ler Dönüştür sekmesinin geçmişinde de görünür.
 
 **Finder ve diğer uygulamalar:** Finder'da Markdown dosyalarına sağ tıklayıp **Hızlı İşlemler** (ya da **Servisler**) › **PDF'e Çevir**'i seçin. Herhangi bir uygulamada Markdown metnini seçip sağ tık › **Servisler** › **Markdown'ı PDF'e Çevir**. Bu seçenekler görünmüyorsa uygulamayı bir kez `/Applications`'tan açın, sonra **Sistem Ayarları › Klavye › Klavye Kestirmeleri › Servisler** bölümüne bakın.
 
