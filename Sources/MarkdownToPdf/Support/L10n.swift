@@ -110,6 +110,30 @@ enum L10n {
         "Bu kopya uygulama olarak derlenmediği için sürümü bilinmiyor."
     )
 
+    static let tabConvert = t("Convert", "Dönüştür")
+    static let tabPreview = t("Preview", "Önizle")
+    static let previewDropTitle = t("Drop a Markdown file to read it", "Okumak için Markdown dosyası bırakın")
+    static let previewDropSubtitle = t(
+        "Or paste Markdown text with ⌘V. It is shown exactly as the PDF will look; nothing is saved until you ask.",
+        "Ya da Markdown metnini ⌘V ile yapıştırın. PDF'te nasıl görünecekse öyle gösterilir; siz istemedikçe hiçbir şey kaydedilmez."
+    )
+    static let previewOpenFile = t("Open File…", "Dosya Aç…")
+    static let previewOpenMessage = t("Choose a Markdown file to preview", "Önizlenecek Markdown dosyasını seçin")
+    static let previewLoading = t("Preparing preview", "Önizleme hazırlanıyor")
+    static let previewFailed = t("Couldn't show this document", "Bu belge gösterilemedi")
+    static let previewStartOver = t("Start Over", "Baştan Başla")
+    static let previewShowsOne = t(
+        "Preview shows one file at a time; the first one is shown.",
+        "Önizleme tek seferde bir dosya gösterir; ilk dosya gösteriliyor."
+    )
+    static let previewReload = t("Reload (⌘R)", "Yeniden yükle (⌘R)")
+    static let previewClose = t("Close", "Kapat")
+    static let saveAsPDF = t("Save as PDF", "PDF olarak kaydet")
+    static func previewSaved(_ name: String) -> String { t("Saved \(name)", "\(name) kaydedildi") }
+    static func pageCount(_ count: Int) -> String {
+        t(count == 1 ? "1 page" : "\(count) pages", "\(count) sayfa")
+    }
+
     static let errorUnreadable = t("The file could not be read.", "Dosya okunamadı.")
     static let errorPrint = t("The PDF could not be created.", "PDF oluşturulamadı.")
     static let errorSave = t("The PDF could not be saved there.", "PDF oraya kaydedilemedi.")

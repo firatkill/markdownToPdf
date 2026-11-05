@@ -7,28 +7,72 @@ struct MarkdownToPdfApp: App {
 
     var body: some Scene {
         Window("markdownToPdf", id: "main") {
-            ContentView()
+            RootView()
                 .environmentObject(appDelegate.queue)
-                .frame(minWidth: 460, minHeight: 420)
+                .environmentObject(appDelegate.preview)
+                .environmentObject(appDelegate.appState)
+                .frame(minWidth: 480, minHeight: 460)
         }
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 520, height: 520)
+        .defaultSize(width: 620, height: 720)
         .commands {
-            CommandGroup(after: .appInfo) {
-                Button(L10n.checkForUpdates) { UpdateChecker.shared.checkNow() }
-            }
-            CommandGroup(replacing: .newItem) {
-                Button(L10n.chooseFiles) { appDelegate.queue.chooseFiles() }
-                    .keyboardShortcut("o")
-            }
+            AppCommands(appState: appDelegate.appState, queue: appDelegate.queue, preview: appDelegate.preview)
         }
     }
 }
 
-/// Owns the queue so files opened from Finder ("Open With", Dock icon) land in it too.
+/// The two tabs at the top of the window.
+enum AppTab: Hashable {
+    case convert
+    case preview
+}
+
+@MainActor
+final class AppState: ObservableObject {
+    /// The app always opens on the Convert tab.
+    @Published var tab: AppTab = .convert
+}
+
+/// Menu items whose action depends on the selected tab.
+struct AppCommands: Commands {
+    @ObservedObject var appState: AppState
+    let queue: ConversionQueue
+    @ObservedObject var preview: PreviewModel
+
+    var body: some Commands {
+        CommandGroup(after: .appInfo) {
+            Button(L10n.checkForUpdates) { UpdateChecker.shared.checkNow() }
+        }
+        CommandGroup(replacing: .newItem) {
+            Button(appState.tab == .preview ? L10n.previewOpenFile : L10n.chooseFiles) {
+                if appState.tab == .preview { preview.openFile() } else { queue.chooseFiles() }
+            }
+            .keyboardShortcut("o")
+        }
+        CommandGroup(replacing: .saveItem) {
+            Button(L10n.saveAsPDF + "…") { preview.save() }
+                .keyboardShortcut("s")
+                .disabled(appState.tab != .preview || preview.document == nil)
+        }
+        CommandGroup(before: .toolbar) {
+            Button(L10n.tabConvert) { appState.tab = .convert }
+                .keyboardShortcut("1")
+            Button(L10n.tabPreview) { appState.tab = .preview }
+                .keyboardShortcut("2")
+            Button(L10n.previewReload.replacingOccurrences(of: " (⌘R)", with: "")) { preview.reload() }
+                .keyboardShortcut("r")
+                .disabled(appState.tab != .preview || preview.document == nil)
+            Divider()
+        }
+    }
+}
+
+/// Owns the queue and the preview so files opened from Finder ("Open With", Dock icon) land in them too.
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let queue = ConversionQueue()
+    let appState = AppState()
+    lazy var preview = PreviewModel(queue: queue)
     private var isCommandLineMode = false
     private var pasteMonitor: Any?
 
@@ -65,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             options: [.urlReadingFileURLsOnly: true]
         ) as? [URL] ?? []
         NSApp.activate(ignoringOtherApps: true)
+        appState.tab = .convert
         queue.add(urls)
     }
 
@@ -77,10 +122,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let text = pasteboard.string(forType: .string),
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         NSApp.activate(ignoringOtherApps: true)
+        appState.tab = .convert
         queue.addText(text)
     }
 
-    /// ⌘V in the main window converts the clipboard. Text fields and dialogs
+    /// ⌘V in the main window converts (or, on the Preview tab, previews) the clipboard. Text fields and dialogs
     /// (such as the save dialog's name field) keep their normal paste.
     private func installPasteShortcut() {
         pasteMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -92,12 +138,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   window.attachedSheet == nil,
                   !(window.firstResponder is NSText)
             else { return event }
-            self.queue.pasteFromClipboard()
+            if self.appState.tab == .preview {
+                self.preview.pasteFromClipboard()
+            } else {
+                self.queue.pasteFromClipboard()
+            }
             return nil
         }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        appState.tab = .convert
         queue.add(urls)
     }
 

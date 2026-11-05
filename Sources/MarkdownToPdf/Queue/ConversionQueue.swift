@@ -124,6 +124,15 @@ final class ConversionQueue: ObservableObject {
         history.save(jobs)
     }
 
+    /// Adds a PDF saved elsewhere (the Preview tab) to the list and the history.
+    func recordSaved(name: String, pdf: URL, isPasted: Bool) {
+        let job = ConversionJob.restored(name: name, pdf: pdf, date: Date(), isPasted: isPasted)
+        // Insert before the current batch so its "File 2 of 5" count stays right.
+        jobs.insert(job, at: batchStart)
+        batchStart += 1
+        history.save(jobs)
+    }
+
     /// Removes one finished item from the list (the PDF itself stays where it is).
     func remove(_ id: UUID) {
         guard let index = jobs.firstIndex(where: { $0.id == id }), jobs[index].status.isFinished else { return }

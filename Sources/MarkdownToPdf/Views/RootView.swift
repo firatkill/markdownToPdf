@@ -1,18 +1,44 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The app's only screen: a drop zone, the list of files, and a loading overlay.
-struct ContentView: View {
-    @EnvironmentObject private var queue: ConversionQueue
+/// The window: an optional update bar, then the Convert or the Preview tab,
+/// picked with the segmented control at the top right.
+struct RootView: View {
+    @EnvironmentObject private var appState: AppState
     @ObservedObject private var updater = UpdateChecker.shared
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if let release = updater.available {
+                UpdateBanner(version: release.version)
+                    .padding([.horizontal, .top], 16)
+            }
+            switch appState.tab {
+            case .convert: ConverterView()
+            case .preview: PreviewView()
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Picker("", selection: $appState.tab) {
+                    Text(L10n.tabConvert).tag(AppTab.convert)
+                    Text(L10n.tabPreview).tag(AppTab.preview)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .help("⌘1 / ⌘2")
+            }
+        }
+    }
+}
+
+/// The Convert tab: a drop zone, the list of files, and a loading overlay.
+struct ConverterView: View {
+    @EnvironmentObject private var queue: ConversionQueue
     @State private var isTargeted = false
 
     var body: some View {
         VStack(spacing: 16) {
-            if let release = updater.available {
-                UpdateBanner(version: release.version)
-            }
-
             DropZone(
                 isTargeted: isTargeted,
                 chooseFiles: { queue.chooseFiles() },
@@ -37,7 +63,7 @@ struct ContentView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .onDrop(of: [.fileURL], isTargeted: $isTargeted, perform: handleDrop)
+        .onDrop(of: [.fileURL, .plainText], isTargeted: $isTargeted, perform: handleDrop)
         .overlay {
             if let job = queue.activeJob {
                 LoadingOverlay(job: job, progress: queue.batchProgress)
@@ -49,25 +75,13 @@ struct ContentView: View {
     }
 
     private func handleDrop(_ providers: [NSItemProvider]) -> Bool {
-        let group = DispatchGroup()
-        var urls: [(Int, URL)] = []
-        let lock = NSLock()
-
-        for (order, provider) in providers.enumerated() where provider.canLoadObject(ofClass: URL.self) {
-            group.enter()
-            _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                if let url, url.isFileURL {
-                    lock.lock(); urls.append((order, url)); lock.unlock()
-                }
-                group.leave()
+        DropLoader.load(providers) { urls, text in
+            if let text {
+                queue.addText(text)
+            } else {
+                queue.add(urls)
             }
         }
-
-        // Keep the order the files were dropped in.
-        group.notify(queue: .main) {
-            queue.add(urls.sorted { $0.0 < $1.0 }.map(\.1))
-        }
-        return !providers.isEmpty
     }
 }
 
